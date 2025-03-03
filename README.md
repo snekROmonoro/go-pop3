@@ -9,6 +9,8 @@ A simple Go POP3 client library for connecting and reading mails from POP3 serve
 
 ## Example
 ```go
+package main
+
 import (
 	"fmt"
 	"github.com/snekROmonoro/go-pop3"
@@ -48,11 +50,35 @@ func main() {
 	// Pull all messages on the server. Message IDs go from 1 to N.
 	for id := 1; id <= count; id++ {
 		m, _ := c.Retr(id)
+		mr := mail.NewReader(m)
 
-		fmt.Println(id, "=", m.Header.Get("subject"))
+		subject, err := mr.Header.Subject()
+		if err != nil {
+			fmt.Printf("failed to read message subject: %v\n", err)
+			continue
+		}
 
-		// To read the multi-part e-mail bodies, see:
-		// https://github.com/emersion/go-message/blob/master/example_test.go#L12
+		fmt.Println(id, "=", subject)
+
+        for {
+			p, err := mr.NextPart()
+			if err == io.EOF {
+				break
+			} else if err != nil {
+				log.Printf("failed to read message part: %v\n", err)
+				continue
+			}
+            
+			switch p.Header.(type) {
+			case *mail.InlineHeader:
+				b, err := io.ReadAll(p.Body)
+				if err != nil {
+					log.Printf("failed to read message body: %v\n", err)
+				} else {
+					log.Printf("body: %s\n", string(b))
+				}
+			}
+		}
 	}
 
 	// Delete all the messages. Server only executes deletions after a successful Quit()
