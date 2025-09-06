@@ -177,23 +177,32 @@ func (c *Conn) ReadOne() ([]byte, error) {
 	return r, err
 }
 
-// ReadAll reads all lines from the connection until the POP3 multiline terminator "." is encountered
-// and returns a bytes.Buffer of all the read lines.
+// ReadAll reads all lines from the connection until the POP3 multiline
+// terminator "." is encountered and returns a bytes.Buffer of all the read lines.
 func (c *Conn) ReadAll() (*bytes.Buffer, error) {
 	buf := &bytes.Buffer{}
 
 	for {
-		b, _, err := c.r.ReadLine()
+		// Read until newline, regardless of line length
+		b, err := c.r.ReadBytes('\n')
 		if err != nil {
 			return nil, err
 		}
 
-		// "." indicates the end of a multi-line response.
-		if bytes.Equal(b, []byte(".")) {
+		// Trim trailing CRLF
+		line := bytes.TrimRight(b, "\r\n")
+
+		// "." indicates the end of a multi-line response
+		if bytes.Equal(line, []byte(".")) {
 			break
 		}
 
-		if _, err := buf.Write(b); err != nil {
+		// Handle dot-stuffed lines: a leading ".." means actual "."
+		if bytes.HasPrefix(line, []byte("..")) {
+			line = line[1:] // drop one leading dot
+		}
+
+		if _, err := buf.Write(line); err != nil {
 			return nil, err
 		}
 		if _, err := buf.Write(lineBreak); err != nil {
