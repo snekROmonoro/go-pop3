@@ -186,6 +186,12 @@ func (c *Conn) ReadOne() ([]byte, error) {
 // ReadAll reads all lines from the connection until the POP3 multiline
 // terminator "." is encountered and returns a bytes.Buffer of all the read lines.
 func (c *Conn) ReadAll() (*bytes.Buffer, error) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Recovered from panic ReadAll:", r)
+		}
+	}()
+
 	buf := &bytes.Buffer{}
 
 	for {
