@@ -168,6 +168,12 @@ func (c *Conn) Cmd(cmd string, isMulti bool, args ...interface{}) (*bytes.Buffer
 
 // ReadOne reads a single line response from the conn.
 func (c *Conn) ReadOne() ([]byte, error) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Recovered from panic ReadOne:", r)
+		}
+	}()
+
 	b, _, err := c.r.ReadLine()
 	if err != nil {
 		return nil, err
